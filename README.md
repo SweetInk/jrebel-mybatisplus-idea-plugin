@@ -2,6 +2,10 @@
 JRebel MybatisPlus hot reloading extension for IntelliJ
 
 # Change logs
+
+## `0.0.2`
+Fixed NPE for MybatisSqlSessionFactoryBean#buildSessionFactory in `mybatis-plus-3.2.0`
+
 ## `0.0.1`
 Simple integrate with Intellij
 
