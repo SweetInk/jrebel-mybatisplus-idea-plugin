@@ -3,6 +3,19 @@ JRebel MybatisPlus hot reloading extension for IntelliJ
 
 # Change logs
 
+## `0.0.4`
+
+Support Tomcat Run/Debug Configuration
+
+Add Debug console log output
+
+Fixed NPE when both configuration and configurationLocation are null
+
+Fixed JVM class verification error [#14](https://github.com/SweetInk/jrebel-mybatisplus/issues/14)
+
+Add log outputs when markFile create failed.
+
+
 ## `0.0.3`
 Compatible with `mybatis-plus-3.4.0`
 
