@@ -4,6 +4,11 @@
     <name>JRebel mybatisPlus extension</name>
     <vendor email="suchu01@hotmail.com" url="https://github.com/sweetink">suchu01</vendor>
     <change-notes><![CDATA[
+          <p>0.0.8</p>
+    <ul>
+        <li>Compatible with IntelliJ IDEA 2026.2.2 <a href="https://github.com/SweetInk/jrebel-mybatisplus/issues/36">#36</a></li>
+    </ul>
+
           <p>0.0.7</p>
     <ul>
         <li>Compatible with mybatis-plus 3.5.7 <a href="https://github.com/SweetInk/jrebel-mybatisplus-idea-plugin/issues/12">#12</a></li>

@@ -8,9 +8,8 @@ import com.intellij.execution.executors.DefaultRunExecutor;
 import com.intellij.execution.runners.JavaProgramPatcher;
 import com.intellij.ide.plugins.IdeaPluginDescriptor;
 import com.intellij.ide.plugins.PluginManager;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.extensions.PluginId;
-import org.apache.commons.lang.StringUtils;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.regex.Pattern;
@@ -22,115 +21,130 @@ import java.util.regex.Pattern;
  * @since 2019/7/6 13:00
  */
 public class PreRunPatcher extends JavaProgramPatcher {
-    private final static Pattern JREBEL_NATIVE_AGENT_PATTER = Pattern.compile(".*(libjrebel|jrebel32\\.dll|jrebel64\\.dll).*");
-    private final static String JREBEL_EXTERNAL_PLUGIN_PROP = "rebel.plugins";
-    private final static String JREBEL_MP_VERSION = "1.0.7";
-    private final static String JREBEL_MP_NAME = "jr-mybatisplus";
-    private final static String JREBEL_MP_SUFFIX = ".jar";
-    private final static String JREBEL_MP_PLUGIN_ID = "jr-mp-ide-idea";
-//    private static final ConsoleLog log = ConsoleLog.getInstance();
+    private static final Logger LOG = Logger.getInstance(PreRunPatcher.class);
 
-    private void dumpJavaParameters(StringBuilder stringBuilder, JavaParameters javaParameters) {
-        String[] args = javaParameters.getVMParametersList().getArray();
-        stringBuilder.append("Vm Params:\n");
-        for (String arg : args) {
-            stringBuilder.append(arg).append("\n");
-        }
-        @NotNull String[] programArgs = javaParameters.getProgramParametersList().getArray();
-        stringBuilder.append("Program Params:\n");
-        for (String arg : programArgs) {
-            stringBuilder.append(arg).append("\n");
-        }
+    private static final Pattern JREBEL_NATIVE_AGENT_PAT =
+            Pattern.compile(".*(libjrebel|jrebel32\\.dll|jrebel64\\.dll).*");
 
-    }
+    private static final String JREBEL_EXTERNAL_PLUGIN_PROP = "rebel.plugins";
+    private static final String JREBEL_MP_VERSION = "1.0.7";
+    private static final String JREBEL_MP_NAME = "jr-mybatisplus";
+    private static final String JREBEL_MP_SUFFIX = ".jar";
+
+    private static final String JREBEL_MP_PLUGIN_ID = "jr-mp-ide-idea";
 
     @Override
-    public void patchJavaParameters(Executor executor, RunProfile configuration, JavaParameters javaParameters) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("Dump Run/Debug Configuration info ----- start\n");
-        builder.append("Current Executor Id:" + executor.getId() + "\n");
-        if (DefaultRunExecutor.EXECUTOR_ID.equals(executor.getId()) || DefaultDebugExecutor.EXECUTOR_ID.equals(executor.getId())) {
-            if (isJRebelRunner()) {
+    public void patchJavaParameters(
+            Executor executor,
+            RunProfile configuration,
+            JavaParameters javaParameters) {
+
+        try {
+            String executorId = executor.getId();
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(
+                        "PreRunPatcher invoked, executor={}, configuration={}",
+                        executorId,
+                        configuration == null
+                                ? "null"
+                                : configuration.getClass().getName()
+                );
+            }
+            if (DefaultRunExecutor.EXECUTOR_ID.equals(executorId)
+                    || DefaultDebugExecutor.EXECUTOR_ID.equals(executorId)) {
+                if (isJRebelRunner()) {
+                    patch(javaParameters);
+                }
+            } else if (hasJRebelArgs(javaParameters)) {
                 patch(javaParameters);
             }
-        } else {
-            if (hasJRebelArgs(javaParameters)) {
-                patch(javaParameters);
-            }
+        } catch (Throwable e) {
+            LOG.error("Failed to patch JRebel command line", e);
         }
-        dumpJavaParameters(builder, javaParameters);
-        dumpStackTrace(builder);
-        builder.append("Dump Run/Debug Configuration info ----- end\n");
-//        log.info(builder.toString(), "");
-        System.out.println("patchers");
     }
 
     /**
-     * Patch the program parameter
-     *
-     * @param javaParameters JavaParameters
+     * Add jr-mybatisplus runtime plugin to -Drebel.plugins
      */
     private void patch(JavaParameters javaParameters) {
         IdeaPluginDescriptor currentPlugin = getCurrentPlugin();
-        if (null == currentPlugin) {
+        if (currentPlugin == null) {
+            LOG.error("Cannot find plugin: " + JREBEL_MP_PLUGIN_ID);
             return;
         }
         String pluginPath = currentPlugin.getPath().getAbsolutePath();
-
-        String jrebelMpPlugin = pluginPath + File.separator + "lib" + File.separator + getJrebelMpFileName();
-        String plugins = javaParameters.getVMParametersList().getPropertyValue(JREBEL_EXTERNAL_PLUGIN_PROP);
-        if (!StringUtils.isEmpty(plugins)) {
-            plugins += "," + jrebelMpPlugin;
-        } else {
-            plugins = jrebelMpPlugin;
+        String jrebelMpPlugin = new File(new File(pluginPath, "lib"), getJrebelMpFileName()).getAbsolutePath();
+        File pluginFile = new File(jrebelMpPlugin);
+        if (!pluginFile.isFile()) {
+            LOG.error("JRebel MyBatisPlus runtime plugin not found: " + pluginFile.getAbsolutePath());
+            return;
         }
-        javaParameters.getVMParametersList().addProperty(JREBEL_EXTERNAL_PLUGIN_PROP, plugins);
+        String plugins = javaParameters
+                .getVMParametersList()
+                .getPropertyValue(JREBEL_EXTERNAL_PLUGIN_PROP);
+        if (plugins != null && plugins.contains(jrebelMpPlugin)) {
+            LOG.debug("JRebel MyBatisPlus plugin already configured: " + jrebelMpPlugin);
+            return;
+        }
+
+        if (plugins == null || plugins.isEmpty()) {
+            plugins = jrebelMpPlugin;
+        } else {
+            plugins = plugins + "," + jrebelMpPlugin;
+        }
+
+        javaParameters.getVMParametersList()
+                .addProperty(JREBEL_EXTERNAL_PLUGIN_PROP, plugins);
+        LOG.info("Added JRebel MyBatisPlus plugin: " + jrebelMpPlugin);
     }
 
     /**
-     * Get the `jr-mp-ide-idea` plugin descriptor
-     *
-     * @return IdeaPluginDescriptor
+     * Get the jr-mp-ide-idea plugin descriptor
      */
     private IdeaPluginDescriptor getCurrentPlugin() {
-        return PluginManager.getPlugin(PluginId.getId(JREBEL_MP_PLUGIN_ID));
+        return PluginManager.getPlugin(
+                PluginId.getId(JREBEL_MP_PLUGIN_ID)
+        );
     }
 
     /**
-     * check the program args contains the `JRebel` arguments
-     *
-     * @param javaParameters JavaParameters
-     * @return true - contains, false - not have jrebel args
+     * Check whether Java parameters already contain JRebel arguments.
      */
     private boolean hasJRebelArgs(JavaParameters javaParameters) {
-        String[] args = javaParameters.getVMParametersList().getArray();
+        String[] args = javaParameters
+                .getVMParametersList()
+                .getArray();
         for (String str : args) {
-            if (str.startsWith("-javaagent:") && (str.endsWith("jrebel.jar") || str.endsWith("jrebel-bootstrap.jar"))) {
+            if (str.startsWith("-javaagent:")
+                    && (str.endsWith("jrebel.jar")
+                    || str.endsWith("jrebel-bootstrap.jar"))) {
                 return true;
             }
-            if (str.startsWith("-agentpath")) {
-                if (JREBEL_NATIVE_AGENT_PATTER.matcher(str).matches()) {
-                    return true;
-                }
+            if (str.startsWith("-agentpath:")
+                    && JREBEL_NATIVE_AGENT_PAT.matcher(str).matches()) {
+                return true;
             }
         }
         return false;
     }
 
-
     /**
-     * Check the Java program runner is JRebelRunner/Debugger
-     *
-     * @return
+     * Check whether the current call comes from JRebel runner/debug runner.
      */
     private boolean isJRebelRunner() {
         int maxStackDeep = 10;
-        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        StackTraceElement[] stackTrace =
+                Thread.currentThread().getStackTrace();
         int stackFrameIndex = 0;
         for (StackTraceElement element : stackTrace) {
-            if (stackFrameIndex > maxStackDeep) return false;
-            String clzName = element.getClassName();
-            if ("com.zeroturnaround.javarebel.idea.plugin.runner.JRebelRunner".equals(clzName) || "com.zeroturnaround.javarebel.idea.plugin.runner.JRebelDebugRunner".equals(clzName)) {
+            if (stackFrameIndex > maxStackDeep) {
+                return false;
+            }
+            String className = element.getClassName();
+            if ("com.zeroturnaround.javarebel.idea.plugin.runner.JRebelRunner"
+                    .equals(className)
+                    || "com.zeroturnaround.javarebel.idea.plugin.runner.JRebelDebugRunner"
+                    .equals(className)) {
                 return true;
             }
             stackFrameIndex++;
@@ -138,21 +152,12 @@ public class PreRunPatcher extends JavaProgramPatcher {
         return false;
     }
 
-    private void dumpStackTrace(StringBuilder stringBuilder) {
-        stringBuilder.append("StackTrace:\n");
-        int maxStackDeep = 10;
-        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-        int stackFrameIndex = 0;
-        for (StackTraceElement element : stackTrace) {
-            if (stackFrameIndex > maxStackDeep) break;
-            if (stackFrameIndex != 0)
-                stringBuilder.append("\t");
-            stringBuilder.append(element.getClassName() + "\n");
-            stackFrameIndex++;
-        }
-    }
-
     private String getJrebelMpFileName() {
-        return String.format("%s-%s%s", JREBEL_MP_NAME, JREBEL_MP_VERSION, JREBEL_MP_SUFFIX);
+        return String.format(
+                "%s-%s%s",
+                JREBEL_MP_NAME,
+                JREBEL_MP_VERSION,
+                JREBEL_MP_SUFFIX
+        );
     }
 }
