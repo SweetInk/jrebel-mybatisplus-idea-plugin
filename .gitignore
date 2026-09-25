@@ -1,0 +1,19 @@
+# Gradle
+.gradle/
+build/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# IntelliJ compiler output
+out/
+
+# Local environment
+local.properties
+
+# OS
+.DS_Store
+Thumbs.db

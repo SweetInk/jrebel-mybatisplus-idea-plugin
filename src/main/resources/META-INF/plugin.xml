@@ -1,0 +1,56 @@
+<idea-plugin>
+    <version>0.0.7</version>
+    <id>jr-mp-ide-idea</id>
+    <name>JRebel mybatisPlus extension</name>
+    <vendor email="suchu01@hotmail.com" url="https://github.com/sweetink">suchu01</vendor>
+    <change-notes><![CDATA[
+          <p>0.0.7</p>
+    <ul>
+        <li>Compatible with mybatis-plus 3.5.7 <a href="https://github.com/SweetInk/jrebel-mybatisplus-idea-plugin/issues/12">#12</a></li>
+        <li>Compatible with mybatis-plus 3.5.6 <a href="https://github.com/SweetInk/jrebel-mybatisplus-idea-plugin/issues/13">#13</a></li>
+    </ul>
+
+          <p>0.0.6</p>
+    <ul>
+        <li>Compatible with mybatis-plus 3.5.6 <a href="https://github.com/SweetInk/jrebel-mybatisplus-idea-plugin/issues/10">#10</a></li>
+
+    </ul>
+        <p>0.0.5</p>
+    <ul>
+        <li>Compatible with mybatis-plus 3.4.0+ <a href="https://github.com/SweetInk/jrebel-mybatisplus-idea-plugin/issues/5">#5</a></li>
+        <li>Some small refactorings</li>
+    </ul>
+    <p>0.0.4</p>
+    <ul>
+        <li>Support Tomcat Run/Debug Configuration</li>
+        <li>Fixed NPE when both configuration and configurationLocation are null</li>
+        <li>Fixed JVM class verification error <a href="https://github.com/SweetInk/jrebel-mybatisplus/issues/14">#14</a></li>
+        <li>Add log outputs when markFile create failed.</li>
+    </ul>
+    <p>0.0.3</p>
+    <ul>
+        <li>Compatible with mybatis-plus v3.4.0</li>
+    </ul>
+     <p>0.0.2</p>
+      <ul>
+        <li>Fixed NPE for MybatisSqlSessionFactoryBean#buildSessionFactory in mybatis-plus-3.2.0.</li>
+      </ul>
+     <p>0.0.1</p>
+      <ul>
+        <li>Simple integrate with Intellij.</li>
+      </ul>
+    ]]>
+    </change-notes>
+    <description>
+        <![CDATA[<p>JRebel MybatisPlus hot reloading extension for IntelliJ</p>]]></description>
+    <depends>com.intellij.modules.java</depends>
+    <depends>JRebelPlugin</depends>
+    <extensions defaultExtensionNs="com.intellij">
+        <java.programPatcher implementation="online.githuboy.idea.plugin.runner.PreRunPatcher" order="last"/>
+    </extensions>
+    <application-components>
+    </application-components>
+    <actions>
+        <!-- Add your actions here -->
+    </actions>
+</idea-plugin>

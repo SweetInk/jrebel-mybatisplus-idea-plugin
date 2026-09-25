@@ -1,0 +1,35 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.intellij' version '0.6.1'
+}
+
+group 'online.githuboy'
+version '0.0.7'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    
+}
+
+
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile group: "online.githuboy", name: "jr-mybatisplus", version: "1.0.7"
+}
+
+intellij {
+    version '2018.3.2'
+    localPath "D:\\Program Files\\JetBrains\\ideaIU-2018.2.8.win"
+    //alternativeIdePath "D:\\Program Files\\JetBrains\\IntelliJ IDEA 2020.1"
+}
+
+patchPluginXml {
+    sinceBuild "139.001"
+    untilBuild ""
+
+
+}
